@@ -2,11 +2,19 @@ import os
 import json
 import numpy as np
 import pandas as pd
+from datetime import timedelta
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, RandomForestClassifier
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
+from config import RESERVOIR_CONFIG, ReservoirConfig
 
-def train_and_evaluate_models(data_path="reservoir_alpha_365d.csv"):
+def train_and_evaluate_models(data_path=None):
+    if data_path is None:
+        data_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "reservoir_alpha_365d.csv",
+        )
+
     if not os.path.exists(data_path):
         from dataset_generator import generate_reservoir_alpha_dataset
         df = generate_reservoir_alpha_dataset()
@@ -100,6 +108,74 @@ def train_and_evaluate_models(data_path="reservoir_alpha_365d.csv"):
         "demand_model": rf_demand,
         "flood_model": rf_flood
     }
+
+
+def forecast_next_days(
+    trained_models,
+    latest_row,
+    days=7,
+    config: ReservoirConfig = RESERVOIR_CONFIG,
+):
+    """Generate deterministic recursive forecasts from the trained model set."""
+    forecasts = []
+    current_level = float(latest_row["reservoir_level_m"])
+    current_inflow = float(latest_row["inflow_cusecs"])
+    current_rainfall = float(latest_row["rainfall_mm"])
+    current_demand = float(latest_row["electricity_demand_mw"])
+    temperature = float(latest_row["temperature_c"])
+    start_date = pd.Timestamp.now().normalize()
+
+    for day in range(1, days + 1):
+        features = pd.DataFrame([{
+            "prev_level": current_level,
+            "prev_inflow": current_inflow,
+            "prev_rainfall": current_rainfall,
+            "prev_demand": current_demand,
+            "temperature_c": temperature,
+        }])
+
+        rainfall = max(
+            0.0,
+            round(float(trained_models["rain_model"].predict(features)[0]), 1),
+        )
+        inflow = max(
+            1000.0,
+            round(float(trained_models["inflow_model"].predict(features)[0]), 0),
+        )
+        demand = max(
+            0.0,
+            round(float(trained_models["demand_model"].predict(features)[0]), 0),
+        )
+        flood_risk = str(trained_models["flood_model"].predict(features)[0])
+
+        level_delta = (inflow - current_inflow) / 18000.0
+        predicted_level = round(
+            float(
+                np.clip(
+                    current_level + level_delta,
+                    config.minimum_operating_level_m,
+                    config.max_water_level_m * 0.99,
+                )
+            ),
+            1,
+        )
+
+        forecasts.append({
+            "day": f"Day +{day}",
+            "date": (start_date + timedelta(days=day)).strftime("%d %b"),
+            "predicted_rainfall_mm": rainfall,
+            "predicted_inflow_cusecs": inflow,
+            "predicted_level_m": predicted_level,
+            "predicted_demand_mw": demand,
+            "predicted_flood_risk": flood_risk,
+        })
+
+        current_level = predicted_level
+        current_inflow = inflow
+        current_rainfall = rainfall
+        current_demand = demand
+
+    return forecasts
 
 if __name__ == "__main__":
     metrics, _ = train_and_evaluate_models()

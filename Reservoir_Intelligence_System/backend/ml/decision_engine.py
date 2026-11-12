@@ -1,31 +1,48 @@
 import numpy as np
+from config import RESERVOIR_CONFIG, ReservoirConfig
 
-def calculate_ris_assessment(reservoir_level_m, inflow_cusecs, rainfall_mm, electricity_demand_mw):
+def calculate_ris_assessment(
+    reservoir_level_m,
+    inflow_cusecs,
+    rainfall_mm,
+    electricity_demand_mw,
+    config: ReservoirConfig = RESERVOIR_CONFIG,
+    predictions: dict | None = None,
+):
     """
-    Transparent Safety & Decision Engine for Reservoir Alpha Prototype.
+    Transparent Safety & Decision Engine for a configurable reservoir prototype.
     
     INPUTS ONLY (No gate status!):
-    - reservoir_level_m (meters, Max FRL = 50.0m)
+    - reservoir_level_m (meters, configured maximum level)
     - inflow_cusecs (cusecs)
     - rainfall_mm (mm)
     - electricity_demand_mw (MW)
     """
-    # 1. AI Lookahead Predictions
-    predicted_rainfall = max(0.0, round(rainfall_mm * 1.05 + np.random.uniform(-2, 4), 1))
-    predicted_inflow = max(1000.0, round(inflow_cusecs * 0.95 + predicted_rainfall * 260 + np.random.uniform(-400, 800), 0))
-    predicted_demand = round(electricity_demand_mw + np.random.uniform(-40, 60), 0)
+    # 1. Model predictions are supplied by the trained inference layer.
+    model_predictions = predictions or {
+        "rainfall_mm": max(0.0, round(rainfall_mm * 1.05, 1)),
+        "inflow_cusecs": max(1000.0, round(inflow_cusecs * 0.95 + rainfall_mm * 260, 0)),
+        "demand_mw": round(electricity_demand_mw, 0),
+    }
+    predicted_rainfall = model_predictions["rainfall_mm"]
+    predicted_inflow = model_predictions["inflow_cusecs"]
+    predicted_demand = model_predictions["demand_mw"]
     
     # 2. Risk Scoring Normalized
-    level_norm = min(1.0, reservoir_level_m / 50.0)
+    level_norm = min(1.0, reservoir_level_m / config.max_water_level_m)
     inflow_norm = min(1.0, inflow_cusecs / 50000.0)
     rain_norm = min(1.0, rainfall_mm / 100.0)
     
     risk_score = (level_norm * 0.45) + (inflow_norm * 0.35) + (rain_norm * 0.20)
     
-    if risk_score >= 0.72 or reservoir_level_m >= 45.0:
+    if risk_score >= 0.72 or reservoir_level_m >= config.safety_threshold_m:
         flood_risk = "CRITICAL"
         water_condition = "RELEASE"
-    elif risk_score >= 0.52 or reservoir_level_m >= 40.0 or inflow_cusecs >= 25000:
+    elif (
+        risk_score >= 0.52
+        or reservoir_level_m >= config.safety_threshold_m * 0.8
+        or inflow_cusecs >= 25000
+    ):
         flood_risk = "HIGH"
         water_condition = "RELEASE"
     elif risk_score >= 0.35 or reservoir_level_m >= 30.0:
@@ -38,14 +55,24 @@ def calculate_ris_assessment(reservoir_level_m, inflow_cusecs, rainfall_mm, elec
     # 3. Transparent Rules Engine
     reasons = []
     
-    if reservoir_level_m >= 43.0 or (reservoir_level_m >= 38.0 and inflow_cusecs > 25000) or flood_risk in ["CRITICAL", "HIGH"]:
+    if (
+        reservoir_level_m >= config.safety_threshold_m * 0.956
+        or (
+            reservoir_level_m >= config.safety_threshold_m * 0.844
+            and inflow_cusecs > 25000
+        )
+        or flood_risk in ["CRITICAL", "HIGH"]
+    ):
         gate_decision = "OPEN"
         paragraph_reason = (
             f"Reservoir level is high ({reservoir_level_m:.1f} m) and predicted inflow is increasing ({inflow_cusecs:,.0f} cusecs) "
             f"due to the catchment rainfall forecast ({rainfall_mm:.1f} mm). Flood risk is elevated. A controlled release is recommended "
             f"to protect infrastructure while maintaining sufficient storage for hydropower demand."
         )
-        reasons.append(f"Reservoir level ({reservoir_level_m:.1f} m) is near defined safety limit (45.0 m)")
+        reasons.append(
+            f"Reservoir level ({reservoir_level_m:.1f} m) is near defined safety limit "
+            f"({config.safety_threshold_m:.1f} m)"
+        )
         reasons.append(f"Surge inflow rate recorded ({inflow_cusecs:,.0f} cusecs)")
         if rainfall_mm > 20.0:
             reasons.append(f"Substantial rainfall forecast ({rainfall_mm:.1f} mm in catchment)")
@@ -54,7 +81,7 @@ def calculate_ris_assessment(reservoir_level_m, inflow_cusecs, rainfall_mm, elec
         opening_pct = int(min(90, max(30, 25 + (reservoir_level_m - 35.0) * 3.5 + (inflow_cusecs / 2400))))
         recommended_release = int(min(65000, max(22000, inflow_cusecs * 0.95 + 2500)))
         
-    elif reservoir_level_m >= 32.0:
+    elif reservoir_level_m >= config.minimum_operating_level_m + 17.0:
         if inflow_cusecs >= 12000 or rainfall_mm >= 20.0:
             gate_decision = "HOLD"
             paragraph_reason = (
@@ -88,7 +115,7 @@ def calculate_ris_assessment(reservoir_level_m, inflow_cusecs, rainfall_mm, elec
                 opening_pct = 15
                 recommended_release = 7500
                 
-    else:  # reservoir_level_m < 32.0
+    else:
         if electricity_demand_mw >= 3000 and reservoir_level_m > 22.0:
             gate_decision = "REDUCE"
             paragraph_reason = (
@@ -115,11 +142,22 @@ def calculate_ris_assessment(reservoir_level_m, inflow_cusecs, rainfall_mm, elec
     net_cusecs_day = predicted_inflow - recommended_release
     # 1 cusec = 0.002447 MCM/day
     delta_mcm = net_cusecs_day * 0.002447
-    delta_m = (delta_mcm / 1200.0) * 50.0
+    delta_m = (
+        delta_mcm / config.full_storage_capacity_mcm
+    ) * config.max_water_level_m
     
-    expected_level_tomorrow = round(np.clip(reservoir_level_m + delta_m, 15.0, 49.8), 1)
+    expected_level_tomorrow = round(
+        np.clip(
+            reservoir_level_m + delta_m,
+            config.minimum_operating_level_m,
+            config.max_water_level_m * 0.996,
+        ),
+        1,
+    )
     
-    confidence = int(min(96, max(82, 93 - abs(rainfall_mm - predicted_rainfall) * 0.4)))
+    confidence = int(
+        min(96, max(82, 93 - abs(rainfall_mm - predicted_rainfall) * 0.4))
+    )
     
     return {
         "flood_risk": flood_risk,

@@ -1,13 +1,17 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+from config import RESERVOIR_CONFIG, ReservoirConfig
 
-def generate_reservoir_alpha_dataset(num_days=365, seed=42):
+def generate_reservoir_alpha_dataset(
+    num_days=365,
+    seed=42,
+    config: ReservoirConfig = RESERVOIR_CONFIG,
+):
     """
-    Generates realistic 365-day historical dataset for Reservoir Alpha.
+    Generates realistic 365-day historical dataset for the configured reservoir.
     Engineering Specs:
-    - Full Reservoir Level (FRL): 50.0 meters
-    - Maximum Storage Capacity: 1,200 MCM (Million Cubic Meters)
+    - Full Reservoir Level and storage capacity come from configuration.
     - Full Spillway Discharge Capacity: 75,000 cusecs
     """
     np.random.seed(seed)
@@ -113,7 +117,10 @@ def generate_reservoir_alpha_dataset(num_days=365, seed=42):
                 level[t] = 44.3
     
     # 4. Storage in MCM (Full capacity = 1,200 MCM)
-    storage_mcm = np.round((level / 50.0) * 1200.0, 1)
+    storage_mcm = np.round(
+        (level / config.max_water_level_m) * config.full_storage_capacity_mcm,
+        1,
+    )
     
     # 5. Electricity Demand (MW)
     temp_base = 24.0 + 7.0 * np.cos((day_of_year - 120) / 365 * 2 * np.pi)
@@ -124,7 +131,16 @@ def generate_reservoir_alpha_dataset(num_days=365, seed=42):
     electricity_demand = np.round(np.clip(demand_base + demand_noise, 1400, 3600), 0)
     
     # 6. Hydropower Potential (MW)
-    hydropower_mw = np.round(np.clip((level / 50.0) * 180.0 * np.random.uniform(0.75, 1.0, size=num_days), 20.0, 240.0), 1)
+    hydropower_mw = np.round(
+        np.clip(
+            (level / config.max_water_level_m)
+            * config.hydroelectric_capacity_mw
+            * np.random.uniform(0.75, 1.0, size=num_days),
+            20.0,
+            config.hydroelectric_capacity_mw,
+        ),
+        1,
+    )
     
     # 7. Flood Risk & Decision Logic
     flood_risk = []
@@ -139,7 +155,7 @@ def generate_reservoir_alpha_dataset(num_days=365, seed=42):
         rain = rainfall[t]
         dem = electricity_demand[t]
         
-        lvl_norm = min(1.0, lvl / 50.0)
+        lvl_norm = min(1.0, lvl / config.max_water_level_m)
         inf_norm = min(1.0, inf / 50000.0)
         rain_norm = min(1.0, rain / 100.0)
         risk_score = (lvl_norm * 0.45) + (inf_norm * 0.35) + (rain_norm * 0.20)
@@ -206,4 +222,4 @@ def generate_reservoir_alpha_dataset(num_days=365, seed=42):
 if __name__ == "__main__":
     df = generate_reservoir_alpha_dataset()
     df.to_csv("reservoir_alpha_365d.csv", index=False)
-    print(f"Generated {len(df)} days of historical data for Reservoir Alpha.")
+    print(f"Generated {len(df)} days of data for {RESERVOIR_CONFIG.name}.")
