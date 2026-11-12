@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { Sliders, Play, RotateCcw, ShieldAlert, Info, Sparkles, ArrowRight } from 'lucide-react';
 import { computeDecision, DEFAULT_TODAYS_DECISION } from '../utils/simulatedData';
+import DataStatus from '../components/DataStatus';
 
-export default function GateOptimization() {
+export default function GateOptimization({ reservoirConfig }) {
   const [levelM, setLevelM] = useState(42.5);
   const [inflowCusecs, setInflowCusecs] = useState(28500);
   const [rainfallMm, setRainfallMm] = useState(42.5);
   const [demandMw, setDemandMw] = useState(2450);
 
   const [assessment, setAssessment] = useState(DEFAULT_TODAYS_DECISION);
+  const [apiError, setApiError] = useState(false);
 
   const runAssessment = (overrideInputs = null) => {
+    setApiError(false);
     const lvl = overrideInputs ? overrideInputs.reservoir_level_m : levelM;
     const inf = overrideInputs ? overrideInputs.inflow_cusecs : inflowCusecs;
     const rain = overrideInputs ? overrideInputs.rainfall_mm : rainfallMm;
@@ -29,7 +32,10 @@ export default function GateOptimization() {
         electricity_demand_mw: dem
       })
     })
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        if (!res.ok) throw new Error(`Simulation request failed: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data?.assessment) {
           setAssessment({
@@ -50,7 +56,10 @@ export default function GateOptimization() {
           });
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error('Unable to load simulation assessment.', error);
+        setApiError(true);
+      });
   };
 
   const loadScenario1 = () => {
@@ -92,6 +101,7 @@ export default function GateOptimization() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
+      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#232f45] pb-4 gap-4">
         <div>
@@ -155,12 +165,12 @@ export default function GateOptimization() {
           <div className="space-y-2 font-mono text-xs">
             <div className="flex justify-between">
               <label className="text-slate-300 font-semibold">1. Water Level (m)</label>
-              <span className="text-teal-400 font-bold">{levelM} m / 50.0 m</span>
+              <span className="text-teal-400 font-bold">{levelM} m / {reservoirConfig.max_water_level_m} m</span>
             </div>
             <input
               type="range"
               min="15.0"
-              max="49.5"
+              max={reservoirConfig.max_water_level_m * 0.99}
               step="0.5"
               value={levelM}
               onChange={(e) => {
@@ -173,7 +183,7 @@ export default function GateOptimization() {
             <div className="flex justify-between text-[10px] text-slate-500">
               <span>15.0 m (Low)</span>
               <span>43.0 m (Safety Zone)</span>
-              <span>49.5 m (Critical)</span>
+              <span>{(reservoirConfig.max_water_level_m * 0.99).toFixed(1)} m (Critical)</span>
             </div>
           </div>
 

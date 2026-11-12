@@ -17,41 +17,48 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import WaterLevelVisual from '../components/WaterLevelVisual';
+import DataStatus from '../components/DataStatus';
 import { 
   DEFAULT_CURRENT_CONDITIONS, 
   DEFAULT_TODAYS_DECISION, 
   DEFAULT_PREDICTIONS 
 } from '../utils/simulatedData';
 
-export default function Dashboard({ setActiveTab }) {
+export default function Dashboard({ setActiveTab, reservoirConfig }) {
   const [current, setCurrent] = useState(DEFAULT_CURRENT_CONDITIONS);
   const [decision, setDecision] = useState(DEFAULT_TODAYS_DECISION);
   const [predictions, setPredictions] = useState(DEFAULT_PREDICTIONS);
   const [isLiveApi, setIsLiveApi] = useState(false);
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     async function fetchData() {
       try {
         const [resCurr, resDec, resPred] = await Promise.all([
-          fetch('/api/current-conditions').catch(() => null),
-          fetch('/api/decision/today').catch(() => null),
-          fetch('/api/predictions').catch(() => null)
+          fetch('/api/current-conditions'),
+          fetch('/api/decision/today'),
+          fetch('/api/predictions')
         ]);
 
-        if (resCurr?.ok && resDec?.ok && resPred?.ok) {
-          const dataCurr = await resCurr.json();
-          const dataDec = await resDec.json();
-          const dataPred = await resPred.json();
-
-          if (isMounted) {
-            setCurrent(dataCurr);
-            setDecision(dataDec);
-            setPredictions(dataPred.predictions || DEFAULT_PREDICTIONS);
-            setIsLiveApi(true);
-          }
+        if (!resCurr.ok || !resDec.ok || !resPred.ok) {
+          throw new Error('One or more dashboard data requests failed.');
         }
-      } catch (err) {}
+
+        const dataCurr = await resCurr.json();
+        const dataDec = await resDec.json();
+        const dataPred = await resPred.json();
+
+        if (isMounted) {
+          setCurrent(dataCurr);
+          setDecision(dataDec);
+          setPredictions(dataPred.predictions || DEFAULT_PREDICTIONS);
+          setIsLiveApi(true);
+        }
+      } catch (error) {
+        console.error('Unable to load dashboard data.', error);
+        if (isMounted) setApiError(true);
+      }
     }
     fetchData();
     return () => { isMounted = false; };
@@ -95,18 +102,19 @@ export default function Dashboard({ setActiveTab }) {
   }[floodRisk] || { badge: 'bg-slate-800 text-slate-300', desc: 'Operating within safe parameters.' };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-10 font-sans">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
+      <DataStatus error={apiError} />
       
       {/* 1. WEBSITE HERO SECTION */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#111928] to-[#0c121d] border border-[#1e2c44] p-6 sm:p-10 shadow-2xl">
         <div className="max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-mono font-semibold">
             <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-            <span>AI-ASSISTED WATER MANAGEMENT • PROTOTYPE RESERVOIR</span>
+            <span>AI-ASSISTED WATER MANAGEMENT • {reservoirConfig.name.toUpperCase()}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            Reservoir Intelligence System
+          {reservoirConfig.name} Intelligence System
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed">
@@ -137,11 +145,16 @@ export default function Dashboard({ setActiveTab }) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">Today's Reservoir Situation</h2>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">Observed physical conditions at Reservoir Alpha</p>
+            <p className="text-xs text-slate-400 font-mono mt-0.5">Observed conditions at {current.reservoir_name}</p>
           </div>
-          <span className="text-xs font-mono text-slate-400 bg-[#121927] px-3 py-1 rounded-lg border border-[#222f46]">
-            {current.timestamp_ist}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-mono px-3 py-1 rounded-lg border ${isLiveApi ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' : 'text-amber-300 bg-amber-500/10 border-amber-500/30'}`}>
+              {isLiveApi ? 'API DATA' : 'SYNTHETIC DATA'}
+            </span>
+            <span className="text-xs font-mono text-slate-400 bg-[#121927] px-3 py-1 rounded-lg border border-[#222f46]">
+              Updated {current.timestamp_ist}
+            </span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -159,7 +172,7 @@ export default function Dashboard({ setActiveTab }) {
                   {current.reservoir_level_m} <span className="text-base font-normal text-slate-400">m</span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Reservoir depth (Full level: 50.0 m)
+                  Current level against full level ({current.max_reservoir_level_m} m)
                 </p>
               </div>
             </div>
@@ -212,11 +225,43 @@ export default function Dashboard({ setActiveTab }) {
               </div>
             </div>
 
+            {/* 5. Storage */}
+            <div className="bg-[#0f1520] p-5 rounded-2xl border border-[#232f45] flex flex-col justify-between hover:border-teal-500/40 transition">
+              <div className="flex items-center justify-between text-slate-400 mb-2">
+                <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-300">Water Stored</span>
+                <Droplets className="w-4 h-4 text-cyan-400" />
+              </div>
+              <div>
+                <div className="text-3xl font-extrabold text-white font-mono">
+                  {current.storage_mcm?.toLocaleString()} <span className="text-base font-normal text-slate-400">MCM</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Of {current.max_storage_mcm?.toLocaleString()} MCM capacity
+                </p>
+              </div>
+            </div>
+
+            {/* 6. Water Released */}
+            <div className="bg-[#0f1520] p-5 rounded-2xl border border-[#232f45] flex flex-col justify-between hover:border-teal-500/40 transition">
+              <div className="flex items-center justify-between text-slate-400 mb-2">
+                <span className="text-xs font-mono font-semibold uppercase tracking-wider text-slate-300">Water Released</span>
+                <Waves className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <div className="text-3xl font-extrabold text-white font-mono">
+                  {current.outflow_cusecs?.toLocaleString()} <span className="text-base font-normal text-slate-400">cusecs</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Recommended controlled release
+                </p>
+              </div>
+            </div>
+
           </div>
 
           {/* Right: Tasteful Water Level Cross-Section Visual */}
           <div className="lg:col-span-4">
-            <WaterLevelVisual level_m={current.reservoir_level_m} max_level_m={50.0} floodRisk={floodRisk} />
+            <WaterLevelVisual level_m={current.reservoir_level_m} max_level_m={current.max_reservoir_level_m} safety_threshold_m={reservoirConfig.safety_threshold_m} floodRisk={floodRisk} />
           </div>
         </div>
       </section>
@@ -353,7 +398,7 @@ export default function Dashboard({ setActiveTab }) {
           <span>AI Decision Support • Operator Approval Required Before Physical Gate Actuation</span>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-slate-500">
-          <span>Data: Simulated Prototype Data</span>
+          <span>Data: {current.data_source || reservoirConfig.data_source}</span>
           <span>•</span>
           <span>Physical Gate Control: Not Connected</span>
         </div>

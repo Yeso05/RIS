@@ -14,6 +14,7 @@ import {
   CartesianGrid 
 } from 'recharts';
 import { DEFAULT_HISTORY_30 } from '../utils/simulatedData';
+import DataStatus from '../components/DataStatus';
 
 export default function Analytics() {
   const [data, setData] = useState({
@@ -29,20 +30,28 @@ export default function Analytics() {
       gate_decision: d.ai_decision
     }))
   });
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     fetch('/api/analytics')
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        if (!res.ok) throw new Error(`Analytics request failed: ${res.status}`);
+        return res.json();
+      })
       .then(resData => {
         if (resData?.time_series && isMounted) setData(resData);
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error('Unable to load analytics data.', error);
+        if (isMounted) setApiError(true);
+      });
     return () => { isMounted = false; };
   }, []);
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
+      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#232f45] pb-4">
         <div>
@@ -71,7 +80,7 @@ export default function Analytics() {
             Water Conditions vs Gate Decision Actions
           </h3>
           <p className="text-xs text-slate-400 font-sans mt-0.5">
-            Demonstrates how changing water level (m), incoming water (cusecs), and rainfall (mm) determine the recommended gate opening.
+            Shows how changing water level (m), incoming water (cusecs), and rainfall (mm) determine the recommended gate opening.
           </p>
         </div>
 

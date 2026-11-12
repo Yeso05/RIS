@@ -13,7 +13,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, alertCount = 2 }) {
+export default function Navbar({ activeTab, setActiveTab, alertCount = 2, reservoirName = 'Reservoir' }) {
   const [timeStr, setTimeStr] = useState('');
 
   useEffect(() => {
@@ -30,11 +30,11 @@ export default function Navbar({ activeTab, setActiveTab, alertCount = 2 }) {
     { id: 'dashboard', label: 'Overview', icon: Activity },
     { id: 'decision', label: "Today's Decision", icon: ShieldCheck },
     { id: 'predictions', label: 'Predictions', icon: TrendingUp },
-    { id: 'simulation', label: 'Optimization', icon: Sliders },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'simulation', label: 'Gate Simulation', icon: Sliders },
+    { id: 'history', label: 'Historical Analytics', icon: History },
+    { id: 'analytics', label: 'Trends', icon: BarChart3 },
     { id: 'alerts', label: 'Alerts', icon: Bell, badge: alertCount },
-    { id: 'model', label: 'AI Performance', icon: BrainCircuit }
+    { id: 'model', label: 'Model Intelligence', icon: BrainCircuit }
   ];
 
   return (
@@ -55,11 +55,11 @@ export default function Navbar({ activeTab, setActiveTab, alertCount = 2 }) {
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm font-black tracking-widest text-white">RIS</span>
               <span className="text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-mono font-semibold">
-                SIMULATION MODE
+                SYNTHETIC DATA
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-sans tracking-wide">
-              Reservoir Intelligence System
+              {reservoirName}
             </p>
           </div>
         </div>

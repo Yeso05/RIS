@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { History, Search, ChevronRight, X, Info, Filter, ShieldCheck, Waves, Lock, Pause } from 'lucide-react';
 import { DEFAULT_HISTORY_30 } from '../utils/simulatedData';
+import DataStatus from '../components/DataStatus';
 
 export default function History30Days() {
   const [history, setHistory] = useState(DEFAULT_HISTORY_30);
   const [selectedDay, setSelectedDay] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     fetch('/api/history/30-days')
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        if (!res.ok) throw new Error(`History request failed: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data?.history && isMounted) setHistory(data.history);
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error('Unable to load history data.', error);
+        if (isMounted) setApiError(true);
+      });
     return () => { isMounted = false; };
   }, []);
 
@@ -39,6 +47,7 @@ export default function History30Days() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
+      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#1b263b] pb-6 gap-4">
         <div>

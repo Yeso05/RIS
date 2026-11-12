@@ -1,9 +1,9 @@
 import React from 'react';
 import { Droplets, ShieldAlert, ArrowUpRight } from 'lucide-react';
 
-export default function WaterLevelVisual({ level_m = 42.5, max_level_m = 50.0, floodRisk = "HIGH" }) {
+export default function WaterLevelVisual({ level_m = 42.5, max_level_m = 50.0, safety_threshold_m = 45.0, floodRisk = "HIGH" }) {
   const percentage = Math.min(100, Math.max(0, (level_m / max_level_m) * 100));
-  const safetyThresholdPct = (45.0 / max_level_m) * 100; // 90%
+  const safetyThresholdPct = (safety_threshold_m / max_level_m) * 100;
   
   const riskTheme = {
     CRITICAL: { barColor: 'bg-red-500', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.4)]', badge: 'text-red-400 bg-red-950/40 border-red-500/30' },
@@ -38,8 +38,8 @@ export default function WaterLevelVisual({ level_m = 42.5, max_level_m = 50.0, f
             <span className="text-red-400">100%</span>
           </div>
           <div className="flex justify-between items-center border-b border-dashed border-amber-500/40 pb-0.5">
-            <span className="text-amber-300">45 m — Safety Threshold</span>
-            <span className="text-amber-300">90%</span>
+            <span className="text-amber-300">{safety_threshold_m} m — Safety Threshold</span>
+            <span className="text-amber-300">{safetyThresholdPct.toFixed(0)}%</span>
           </div>
           <div className="flex justify-between items-center border-b border-slate-700/40 pb-0.5">
             <span className="text-slate-400">35 m — Normal Operating Buffer</span>

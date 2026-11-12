@@ -12,19 +12,27 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { DEFAULT_TODAYS_DECISION } from '../utils/simulatedData';
+import DataStatus from '../components/DataStatus';
 
-export default function TodaysDecision() {
+export default function TodaysDecision({ reservoirConfig }) {
   const [decisionData, setDecisionData] = useState(DEFAULT_TODAYS_DECISION);
   const [confirmed, setConfirmed] = useState(false);
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     fetch('/api/decision/today')
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        if (!res.ok) throw new Error(`Decision request failed: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data && isMounted) setDecisionData(data);
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error("Unable to load today's decision.", error);
+        if (isMounted) setApiError(true);
+      });
     return () => { isMounted = false; };
   }, []);
 
@@ -40,11 +48,12 @@ export default function TodaysDecision() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
+      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#232f45] pb-4">
         <div>
           <span className="text-xs font-mono text-teal-400 font-bold uppercase tracking-wider">
-            DECISION DIRECTIVE
+            DECISION DIRECTIVE • {reservoirConfig.name}
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1">
             Today's Operational Directive
@@ -106,7 +115,7 @@ export default function TodaysDecision() {
                 <span>Water Level</span>
               </div>
               <div className="text-xl font-bold text-white">{inputs?.reservoir_level_m} m</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">Full level: 50.0 m</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Full level: {reservoirConfig.max_water_level_m} m</div>
             </div>
 
             <div className="bg-[#151e2d] p-4 rounded-2xl border border-[#232f45]">

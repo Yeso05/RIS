@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
+import DataStatus from './components/DataStatus';
 import Dashboard from './pages/Dashboard';
 import TodaysDecision from './pages/TodaysDecision';
 import AIPredictions from './pages/AIPredictions';
@@ -8,19 +9,47 @@ import History30Days from './pages/History30Days';
 import Analytics from './pages/Analytics';
 import Alerts from './pages/Alerts';
 import ModelPerformance from './pages/ModelPerformance';
+import { DEFAULT_RESERVOIR_CONFIG } from './utils/simulatedData';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [reservoirConfig, setReservoirConfig] = useState(DEFAULT_RESERVOIR_CONFIG);
+  const [configError, setConfigError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/reservoir-config')
+      .then((response) => {
+        if (!response.ok) throw new Error(`Configuration request failed: ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (data && isMounted) {
+          setReservoirConfig({
+            ...data,
+            name: data.name || 'Reservoir',
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Unable to load reservoir configuration.', error);
+        if (isMounted) setConfigError(true);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-[#f0f6fc] flex flex-col font-sans">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} alertCount={2} />
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} alertCount={2} reservoirName={reservoirConfig.name} />
 
       <main className="flex-1 pb-12">
-        {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} />}
-        {activeTab === 'decision' && <TodaysDecision />}
-        {activeTab === 'predictions' && <AIPredictions />}
-        {activeTab === 'simulation' && <GateOptimization />}
+        <div className="mx-auto max-w-[1600px] px-4 pt-4 sm:px-6">
+          <DataStatus error={configError} />
+        </div>
+        {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} reservoirConfig={reservoirConfig} />}
+        {activeTab === 'decision' && <TodaysDecision reservoirConfig={reservoirConfig} />}
+        {activeTab === 'predictions' && <AIPredictions reservoirConfig={reservoirConfig} />}
+        {activeTab === 'simulation' && <GateOptimization reservoirConfig={reservoirConfig} />}
         {activeTab === 'history' && <History30Days />}
         {activeTab === 'analytics' && <Analytics />}
         {activeTab === 'alerts' && <Alerts />}
@@ -29,7 +58,7 @@ export default function App() {
 
       <footer className="border-t border-[#2a364f] bg-[#0f1726] px-6 py-3 text-center text-xs font-mono text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
         <div>
-          <span className="font-bold text-teal-400">RIS — Reservoir Intelligence System</span> (Reservoir Alpha Prototype)
+          <span className="font-bold text-teal-400">RIS — Reservoir Intelligence System</span> ({reservoirConfig.name})
         </div>
         <div className="flex items-center gap-4 text-[11px]">
           <span>Decision Support System</span>

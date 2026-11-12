@@ -1,22 +1,38 @@
 // Realistic simulated prototype dataset with human-friendly terminology and reasoning
 
+export const DEFAULT_RESERVOIR_CONFIG = {
+  name: "Reservoir",
+  description: null,
+  location: { latitude: null, longitude: null },
+  max_water_level_m: 50.0,
+  full_storage_capacity_mcm: 1200.0,
+  safety_threshold_m: 45.0,
+  minimum_operating_level_m: 15.0,
+  spillway_gates_count: 12,
+  hydroelectric_capacity_mw: 240.0,
+  data_source: "Synthetic data",
+  physical_gate_control: "Not Connected"
+};
+
 export const DEFAULT_CURRENT_CONDITIONS = {
-  reservoir_name: "Reservoir Alpha",
+  reservoir_name: DEFAULT_RESERVOIR_CONFIG.name,
   timestamp_ist: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + " • " + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) + " IST",
   reservoir_level_m: 42.5,
-  max_reservoir_level_m: 50.0,
+  max_reservoir_level_m: DEFAULT_RESERVOIR_CONFIG.max_water_level_m,
   storage_mcm: 1020.0,
-  max_storage_mcm: 1200.0,
+  max_storage_mcm: DEFAULT_RESERVOIR_CONFIG.full_storage_capacity_mcm,
   inflow_cusecs: 28500,
+  outflow_cusecs: 29575,
   rainfall_mm: 42.5,
   electricity_demand_mw: 2450,
   hydropower_mw: 185.0,
   temperature_c: 28.5,
-  water_condition: "WATCH"
+  water_condition: "WATCH",
+  data_source: DEFAULT_RESERVOIR_CONFIG.data_source
 };
 
 export function computeDecision(level_m, inflow_cusecs, rainfall_mm, demand_mw) {
-  const levelNorm = Math.min(1.0, level_m / 50.0);
+  const levelNorm = Math.min(1.0, level_m / DEFAULT_RESERVOIR_CONFIG.max_water_level_m);
   const inflowNorm = Math.min(1.0, inflow_cusecs / 50000.0);
   const rainNorm = Math.min(1.0, rainfall_mm / 100.0);
   
@@ -109,7 +125,7 @@ export function computeDecision(level_m, inflow_cusecs, rainfall_mm, demand_mw) 
   
   return {
     date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-    reservoir_name: "Reservoir Alpha",
+    reservoir_name: DEFAULT_RESERVOIR_CONFIG.name,
     inputs: {
       reservoir_level_m: level_m,
       inflow_cusecs: inflow_cusecs,
@@ -192,7 +208,7 @@ export const DEFAULT_HISTORY_30 = Array.from({ length: 30 }).map((_, i) => {
     date: dateStr,
     full_date: d.toISOString().split('T')[0],
     reservoir_level_m: level_m,
-    storage_mcm: Math.round((level_m / 50.0) * 1200 * 10) / 10,
+    storage_mcm: Math.round((level_m / DEFAULT_RESERVOIR_CONFIG.max_water_level_m) * DEFAULT_RESERVOIR_CONFIG.full_storage_capacity_mcm * 10) / 10,
     inflow_cusecs: inflow_cusecs,
     rainfall_mm: rainfall_mm,
     electricity_demand_mw: demand_mw,

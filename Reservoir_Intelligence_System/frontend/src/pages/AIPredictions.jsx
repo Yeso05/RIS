@@ -2,30 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, CloudRain, Waves, Droplets, Zap } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area } from 'recharts';
 import { DEFAULT_PREDICTIONS } from '../utils/simulatedData';
+import DataStatus from '../components/DataStatus';
 
-export default function AIPredictions() {
+export default function AIPredictions({ reservoirConfig }) {
   const [data, setData] = useState(DEFAULT_PREDICTIONS);
+  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     fetch('/api/predictions')
-      .then(res => res.ok ? res.json() : null)
+      .then(res => {
+        if (!res.ok) throw new Error(`Prediction request failed: ${res.status}`);
+        return res.json();
+      })
       .then(resData => {
         if (resData?.predictions && isMounted) {
           setData(resData.predictions);
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error('Unable to load prediction data.', error);
+        if (isMounted) setApiError(true);
+      });
     return () => { isMounted = false; };
   }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
+      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#232f45] pb-4">
         <div>
           <span className="text-xs font-mono text-teal-400 font-bold uppercase tracking-wider">
-            FORECAST HORIZON
+            FORECAST HORIZON • {reservoirConfig.name}
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mt-1">
             7-Day Hydrological Forecast
