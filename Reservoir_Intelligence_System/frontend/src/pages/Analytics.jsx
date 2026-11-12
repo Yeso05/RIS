@@ -14,7 +14,6 @@ import {
   CartesianGrid 
 } from 'recharts';
 import { DEFAULT_HISTORY_30 } from '../utils/simulatedData';
-import DataStatus from '../components/DataStatus';
 
 export default function Analytics() {
   const [data, setData] = useState({
@@ -30,8 +29,6 @@ export default function Analytics() {
       gate_decision: d.ai_decision
     }))
   });
-  const [apiError, setApiError] = useState(false);
-
   useEffect(() => {
     let isMounted = true;
     fetch('/api/analytics')
@@ -44,14 +41,12 @@ export default function Analytics() {
       })
       .catch((error) => {
         console.error('Unable to load analytics data.', error);
-        if (isMounted) setApiError(true);
       });
     return () => { isMounted = false; };
   }, []);
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
-      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#232f45] pb-4">
         <div>

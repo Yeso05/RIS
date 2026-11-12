@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, Info } from 'lucide-react';
 import { DEFAULT_MODEL_METRICS } from '../utils/simulatedData';
-import DataStatus from '../components/DataStatus';
 
 export default function ModelPerformance() {
   const [metrics, setMetrics] = useState(DEFAULT_MODEL_METRICS);
-  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -19,7 +17,6 @@ export default function ModelPerformance() {
       })
       .catch((error) => {
         console.error('Unable to load model metrics.', error);
-        if (isMounted) setApiError(true);
       });
     return () => { isMounted = false; };
   }, []);
@@ -31,7 +28,6 @@ export default function ModelPerformance() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans">
-      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#2a364f] pb-4">
         <div>

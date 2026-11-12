@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
-import DataStatus from './components/DataStatus';
 import Dashboard from './pages/Dashboard';
 import TodaysDecision from './pages/TodaysDecision';
 import AIPredictions from './pages/AIPredictions';
@@ -14,7 +13,6 @@ import { DEFAULT_RESERVOIR_CONFIG } from './utils/simulatedData';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [reservoirConfig, setReservoirConfig] = useState(DEFAULT_RESERVOIR_CONFIG);
-  const [configError, setConfigError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -33,7 +31,6 @@ export default function App() {
       })
       .catch((error) => {
         console.error('Unable to load reservoir configuration.', error);
-        if (isMounted) setConfigError(true);
       });
     return () => { isMounted = false; };
   }, []);
@@ -43,9 +40,6 @@ export default function App() {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} alertCount={2} reservoirName={reservoirConfig.name} />
 
       <main className="flex-1 pb-12">
-        <div className="mx-auto max-w-[1600px] px-4 pt-4 sm:px-6">
-          <DataStatus error={configError} />
-        </div>
         {activeTab === 'dashboard' && <Dashboard setActiveTab={setActiveTab} reservoirConfig={reservoirConfig} />}
         {activeTab === 'decision' && <TodaysDecision reservoirConfig={reservoirConfig} />}
         {activeTab === 'predictions' && <AIPredictions reservoirConfig={reservoirConfig} />}

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, ShieldAlert, Info } from 'lucide-react';
 import { DEFAULT_ALERTS } from '../utils/simulatedData';
-import DataStatus from '../components/DataStatus';
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState(DEFAULT_ALERTS);
-  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -19,14 +17,12 @@ export default function Alerts() {
       })
       .catch((error) => {
         console.error('Unable to load alerts.', error);
-        if (isMounted) setApiError(true);
       });
     return () => { isMounted = false; };
   }, []);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto font-sans">
-      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#2a364f] pb-4">
         <div>

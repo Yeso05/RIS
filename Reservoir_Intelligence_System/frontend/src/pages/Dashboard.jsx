@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import WaterLevelVisual from '../components/WaterLevelVisual';
-import DataStatus from '../components/DataStatus';
 import { 
   DEFAULT_CURRENT_CONDITIONS, 
   DEFAULT_TODAYS_DECISION, 
@@ -29,7 +28,6 @@ export default function Dashboard({ setActiveTab, reservoirConfig }) {
   const [decision, setDecision] = useState(DEFAULT_TODAYS_DECISION);
   const [predictions, setPredictions] = useState(DEFAULT_PREDICTIONS);
   const [isLiveApi, setIsLiveApi] = useState(false);
-  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -57,7 +55,6 @@ export default function Dashboard({ setActiveTab, reservoirConfig }) {
         }
       } catch (error) {
         console.error('Unable to load dashboard data.', error);
-        if (isMounted) setApiError(true);
       }
     }
     fetchData();
@@ -103,8 +100,6 @@ export default function Dashboard({ setActiveTab, reservoirConfig }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
-      <DataStatus error={apiError} />
-      
       {/* 1. WEBSITE HERO SECTION */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#111928] to-[#0c121d] border border-[#1e2c44] p-6 sm:p-10 shadow-2xl">
         <div className="max-w-3xl space-y-4">

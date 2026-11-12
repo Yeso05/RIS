@@ -12,12 +12,10 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { DEFAULT_TODAYS_DECISION } from '../utils/simulatedData';
-import DataStatus from '../components/DataStatus';
 
 export default function TodaysDecision({ reservoirConfig }) {
   const [decisionData, setDecisionData] = useState(DEFAULT_TODAYS_DECISION);
   const [confirmed, setConfirmed] = useState(false);
-  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -31,7 +29,6 @@ export default function TodaysDecision({ reservoirConfig }) {
       })
       .catch((error) => {
         console.error("Unable to load today's decision.", error);
-        if (isMounted) setApiError(true);
       });
     return () => { isMounted = false; };
   }, []);
@@ -48,7 +45,6 @@ export default function TodaysDecision({ reservoirConfig }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
-      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#232f45] pb-4">
         <div>

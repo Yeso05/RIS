@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Sliders, Play, RotateCcw, ShieldAlert, Info, Sparkles, ArrowRight } from 'lucide-react';
 import { computeDecision, DEFAULT_TODAYS_DECISION } from '../utils/simulatedData';
-import DataStatus from '../components/DataStatus';
 
 export default function GateOptimization({ reservoirConfig }) {
   const [levelM, setLevelM] = useState(42.5);
@@ -10,10 +9,8 @@ export default function GateOptimization({ reservoirConfig }) {
   const [demandMw, setDemandMw] = useState(2450);
 
   const [assessment, setAssessment] = useState(DEFAULT_TODAYS_DECISION);
-  const [apiError, setApiError] = useState(false);
 
   const runAssessment = (overrideInputs = null) => {
-    setApiError(false);
     const lvl = overrideInputs ? overrideInputs.reservoir_level_m : levelM;
     const inf = overrideInputs ? overrideInputs.inflow_cusecs : inflowCusecs;
     const rain = overrideInputs ? overrideInputs.rainfall_mm : rainfallMm;
@@ -58,7 +55,6 @@ export default function GateOptimization({ reservoirConfig }) {
       })
       .catch((error) => {
         console.error('Unable to load simulation assessment.', error);
-        setApiError(true);
       });
   };
 
@@ -101,7 +97,6 @@ export default function GateOptimization({ reservoirConfig }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
-      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[#232f45] pb-4 gap-4">
         <div>

@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, CloudRain, Waves, Droplets, Zap } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, AreaChart, Area } from 'recharts';
 import { DEFAULT_PREDICTIONS } from '../utils/simulatedData';
-import DataStatus from '../components/DataStatus';
 
 export default function AIPredictions({ reservoirConfig }) {
   const [data, setData] = useState(DEFAULT_PREDICTIONS);
-  const [apiError, setApiError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -22,14 +20,12 @@ export default function AIPredictions({ reservoirConfig }) {
       })
       .catch((error) => {
         console.error('Unable to load prediction data.', error);
-        if (isMounted) setApiError(true);
       });
     return () => { isMounted = false; };
   }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 font-sans">
-      <DataStatus error={apiError} />
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[#232f45] pb-4">
         <div>
