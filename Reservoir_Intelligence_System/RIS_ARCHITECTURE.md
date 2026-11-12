@@ -2,9 +2,9 @@
 
 ## Architecture Document
 
-**Document type:** High-Level Design (HLD) and Low-Level Design (LLD)  
-**System version:** Prototype 1.0  
-**Repository:** `Yeso05/RIS`  
+**Document type:** High-Level Design (HLD) and Low-Level Design (LLD)
+**System version:** Prototype 1.0
+**Repository:** `Yeso05/RIS`
 **Primary branch:** `feat/ui`
 
 ## 1. Purpose and Scope
