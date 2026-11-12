@@ -433,4 +433,3 @@ The following changes are recommended before production or safety-critical use:
 8. Add observability: structured logs, health/readiness endpoints, metrics, and alerts.
 9. Establish safety review, simulation validation, and human-in-the-loop approval gates
    before any future control-system integration.
-
